@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Active Imagination</title>
+<link href="https://fonts.googleapis.com/css2?family=Arsenal:ital,wght@0,400;0,700;1,400&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #1a1714;
+    --paper: #f0ebe2;
+    --paper-deep: #e4ddd1;
+    --ash: #8a8278;
+    --ember: #c44a2a;
+    --shadow: rgba(26,23,20,0.12);
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--ink);
+    overflow: hidden;
+  }
+
+  body {
+    font-family: 'Arsenal', serif;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  #app {
+    width: min(680px, 96vw);
+    height: min(820px, 94vh);
+    background: var(--paper);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 40px 120px rgba(0,0,0,0.6), 0 0 0 1px rgba(26,23,20,0.2);
+  }
+
+  #app::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent,
+      transparent 31px,
+      rgba(139,130,120,0.08) 31px,
+      rgba(139,130,120,0.08) 32px
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* API KEY SCREEN */
+  #key-screen {
+    position: absolute;
+    inset: 0;
+    background: var(--paper);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 48px 48px;
+  }
+
+  #key-screen h2 {
+    font-family: 'Arsenal', serif;
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ash);
+    margin-bottom: 28px;
+  }
+
+  #key-screen p {
+    font-family: 'IM Fell English', serif;
+    font-size: 14px;
+    line-height: 1.75;
+    color: var(--ink);
+    font-style: italic;
+    margin-bottom: 28px;
+    max-width: 420px;
+  }
+
+  #key-screen .key-note {
+    font-size: 12px;
+    color: var(--ash);
+    font-style: normal;
+    margin-top: -16px;
+    margin-bottom: 28px;
+  }
+
+  #api-key-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(26,23,20,0.2);
+    padding: 8px 0;
+    font-family: 'Arsenal', serif;
+    font-size: 13px;
+    color: var(--ink);
+    outline: none;
+    letter-spacing: 0.05em;
+    transition: border-color 0.2s;
+    margin-bottom: 20px;
+  }
+
+  #api-key-input:focus { border-bottom-color: var(--ember); }
+  #api-key-input::placeholder { color: var(--ash); font-style: italic; letter-spacing: 0; }
+
+  #key-submit {
+    background: none;
+    border: 1px solid var(--ember);
+    color: var(--ember);
+    font-family: 'Arsenal', serif;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 8px 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    align-self: flex-start;
+  }
+
+  #key-submit:hover { background: var(--ember); color: var(--paper); }
+
+  #key-error {
+    font-family: 'IM Fell English', serif;
+    font-size: 13px;
+    color: var(--ember);
+    margin-top: 12px;
+    display: none;
+    font-style: italic;
+  }
+
+  /* HEADER */
+  #header {
+    padding: 22px 36px 16px;
+    border-bottom: 1px solid rgba(26,23,20,0.1);
+    position: relative;
+    z-index: 10;
+    flex-shrink: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+
+  #header-left h1 {
+    font-family: 'Arsenal', serif;
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ash);
+  }
+
+  #phase-indicator {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+    align-items: center;
+  }
+
+  .phase-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--paper-deep);
+    border: 1px solid var(--ash);
+    transition: all 0.4s ease;
+  }
+
+  .phase-dot.active {
+    background: var(--ember);
+    border-color: var(--ember);
+    box-shadow: 0 0 6px rgba(196,74,42,0.4);
+  }
+
+  .phase-dot.done { background: var(--ash); border-color: var(--ash); }
+
+  #phase-label {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ash);
+    margin-left: 8px;
+    font-style: italic;
+  }
+
+  /* BESTIARY TOGGLE */
+  #bestiary-toggle {
+    background: none;
+    border: 1px solid rgba(26,23,20,0.15);
+    color: var(--ash);
+    font-family: 'Arsenal', serif;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  #bestiary-toggle:hover { border-color: var(--ember); color: var(--ember); }
+
+  /* BESTIARY PANEL */
+  #bestiary-panel {
+    display: none;
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 260px;
+    background: var(--paper-deep);
+    border-left: 1px solid rgba(26,23,20,0.1);
+    z-index: 20;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #bestiary-panel.open { display: flex; }
+
+  #bestiary-header {
+    padding: 22px 20px 14px;
+    border-bottom: 1px solid rgba(26,23,20,0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-shrink: 0;
+  }
+
+  #bestiary-header h2 {
+    font-family: 'Arsenal', serif;
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ash);
+  }
+
+  #bestiary-close {
+    background: none;
+    border: none;
+    color: var(--ash);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 2px;
+    transition: color 0.2s;
+  }
+
+  #bestiary-close:hover { color: var(--ember); }
+
+  #bestiary-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+  }
+
+  #bestiary-list::-webkit-scrollbar { width: 2px; }
+  #bestiary-list::-webkit-scrollbar-thumb { background: var(--ash); }
+
+  .bestiary-entry {
+    margin-bottom: 20px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid rgba(26,23,20,0.07);
+    animation: fadeIn 0.3s ease forwards;
+  }
+
+  .bestiary-entry:last-child { border-bottom: none; }
+
+  .bestiary-date {
+    font-size: 8px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ash);
+    opacity: 0.6;
+    margin-bottom: 5px;
+  }
+
+  .bestiary-images {
+    font-family: 'IM Fell English', serif;
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--ink);
+    font-style: italic;
+  }
+
+  .bestiary-gesture {
+    font-family: 'Arsenal', serif;
+    font-size: 11px;
+    color: var(--ember);
+    margin-top: 6px;
+    letter-spacing: 0.05em;
+  }
+
+  #bestiary-empty {
+    font-family: 'IM Fell English', serif;
+    font-size: 13px;
+    color: var(--ash);
+    font-style: italic;
+    opacity: 0.6;
+    line-height: 1.7;
+  }
+
+  /* CONVERSATION */
+  #conversation {
+    flex: 1;
+    overflow-y: auto;
+    padding: 28px 36px;
+    position: relative;
+    z-index: 10;
+    scroll-behavior: smooth;
+  }
+
+  #conversation::-webkit-scrollbar { width: 3px; }
+  #conversation::-webkit-scrollbar-track { background: transparent; }
+  #conversation::-webkit-scrollbar-thumb { background: var(--ash); }
+
+  .message {
+    margin-bottom: 24px;
+    animation: fadeIn 0.5s ease forwards;
+    opacity: 0;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .message.user {
+    padding-left: 28px;
+    border-left: 2px solid var(--ember);
+  }
+
+  .message-role {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ash);
+    margin-bottom: 5px;
+  }
+
+  .message-text {
+    font-family: 'IM Fell English', serif;
+    font-size: 15px;
+    line-height: 1.75;
+    color: var(--ink);
+  }
+
+  .message.guide .message-text { font-style: italic; }
+  .message.user .message-text { font-style: normal; }
+  .message.return .message-text { color: var(--ember); }
+
+  /* SAVE PROMPT */
+  #save-prompt {
+    display: none;
+    padding: 20px 36px;
+    border-top: 1px solid rgba(26,23,20,0.08);
+    background: var(--paper);
+    position: relative;
+    z-index: 10;
+    flex-shrink: 0;
+  }
+
+  #save-prompt p {
+    font-family: 'IM Fell English', serif;
+    font-size: 13px;
+    color: var(--ash);
+    font-style: italic;
+    margin-bottom: 10px;
+  }
+
+  #save-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(26,23,20,0.2);
+    padding: 6px 0;
+    font-family: 'IM Fell English', serif;
+    font-size: 14px;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  #save-input:focus { border-bottom-color: var(--ember); }
+  #save-input::placeholder { color: var(--ash); font-style: italic; }
+
+  #save-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .save-btn {
+    background: none;
+    border: 1px solid rgba(26,23,20,0.15);
+    color: var(--ash);
+    font-family: 'Arsenal', serif;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .save-btn:hover { border-color: var(--ember); color: var(--ember); }
+  .save-btn.primary { border-color: var(--ember); color: var(--ember); }
+
+  /* INPUT AREA */
+  #input-area {
+    padding: 20px 36px 28px;
+    border-top: 1px solid rgba(26,23,20,0.08);
+    position: relative;
+    z-index: 10;
+    flex-shrink: 0;
+    background: var(--paper);
+  }
+
+  #input-wrapper { position: relative; }
+
+  #user-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(26,23,20,0.2);
+    padding: 8px 48px 8px 0;
+    font-family: 'IM Fell English', serif;
+    font-size: 15px;
+    color: var(--ink);
+    resize: none;
+    outline: none;
+    min-height: 36px;
+    max-height: 140px;
+    overflow-y: auto;
+    line-height: 1.6;
+    transition: border-color 0.2s ease;
+  }
+
+  #user-input:focus { border-bottom-color: var(--ember); }
+  #user-input::placeholder { color: var(--ash); font-style: italic; font-size: 14px; }
+
+  #send-btn {
+    position: absolute;
+    right: 0; bottom: 6px;
+    background: none; border: none;
+    cursor: pointer; padding: 4px;
+    color: var(--ash);
+    transition: color 0.2s ease;
+    font-size: 18px; line-height: 1;
+  }
+
+  #send-btn:hover { color: var(--ember); }
+  #send-btn:disabled { opacity: 0.3; cursor: default; }
+
+  #restart-btn {
+    display: none;
+    background: none;
+    border: 1px solid rgba(26,23,20,0.15);
+    color: var(--ash);
+    font-family: 'Arsenal', serif;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: all 0.2s;
+  }
+
+  #restart-btn:hover { border-color: var(--ember); color: var(--ember); }
+
+  .phase-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 8px 0 24px;
+    opacity: 0.4;
+  }
+
+  .phase-divider::before, .phase-divider::after {
+    content: ''; flex: 1;
+    height: 1px; background: var(--ash);
+  }
+
+  .phase-divider span {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ash);
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- API Key Screen -->
+  <div id="key-screen">
+    <h2>Active Imagination</h2>
+    <p>This tool uses Claude to guide a session of Jungian active imagination. It requires an Anthropic API key to run.</p>
+    <p class="key-note">Your key is used only to make requests directly to Anthropic. It is not stored anywhere except your browser's memory for this session.</p>
+    <input type="password" id="api-key-input" placeholder="sk-ant-...">
+    <button id="key-submit">begin</button>
+    <div id="key-error">That key didn't work. Check it and try again.</div>
+  </div>
+
+  <div id="header">
+    <div id="header-left">
+      <h1>Active Imagination</h1>
+      <div id="phase-indicator">
+        <div class="phase-dot active" id="dot-0"></div>
+        <div class="phase-dot" id="dot-1"></div>
+        <div class="phase-dot" id="dot-2"></div>
+        <span id="phase-label">The Image</span>
+      </div>
+    </div>
+    <button id="bestiary-toggle">figures</button>
+  </div>
+
+  <!-- Bestiary panel -->
+  <div id="bestiary-panel">
+    <div id="bestiary-header">
+      <h2>Figures &amp; Images</h2>
+      <button id="bestiary-close">×</button>
+    </div>
+    <div id="bestiary-list">
+      <p id="bestiary-empty">Nothing recorded yet.<br>Figures appear here after each session.</p>
+    </div>
+  </div>
+
+  <div id="conversation"></div>
+
+  <div id="typing" style="padding: 0 36px; display:none;">
+    <div class="typing-dots"><span></span><span></span><span></span></div>
+  </div>
+
+  <!-- Save prompt — appears after gesture is named -->
+  <div id="save-prompt">
+    <p>Which images or figures felt particularly alive in this session?</p>
+    <input type="text" id="save-input" placeholder="name them here, briefly...">
+    <div id="save-actions">
+      <button class="save-btn primary" id="save-confirm">record</button>
+      <button class="save-btn" id="save-skip">skip</button>
+    </div>
+  </div>
+
+  <div id="input-area">
+    <div id="input-wrapper">
+      <textarea id="user-input" placeholder="write here..." rows="1"></textarea>
+      <button id="send-btn">→</button>
+    </div>
+    <button id="restart-btn">begin again</button>
+  </div>
+</div>
+
+<script>
+const SYSTEM_PROMPT = `You are a guide for Jungian active imagination. Your role is strict and specific.
+
+THE PROCESS has three phases. You move through them in order, taking as many exchanges as needed — never rushing.
+
+PHASE 1 — THE IMAGE
+Your task: help the person drop from the task-thought or surface feeling to the actual image underneath it. Ask one precise question at a time. Attend to what is concretely present: location, texture, atmosphere, figures, objects, quality of light. Never interpret. Never explain. When a live image is present — something with specificity and aliveness — move to Phase 2. Signal with: [PHASE:ENCOUNTER]
+
+PHASE 2 — THE ENCOUNTER
+The image is now something that can be addressed. Invite the person to speak directly to it or into it as themselves. If a figure is present, voice what that figure would actually say — not what the ego hopes to hear. Stay with the tension between ego and image. Do not resolve it. Follow the image wherever it leads but do not pursue it into deep biographical memory — if memory surfaces, note it and return to the present image. When something essential has passed between the person and the image — a real contact, a movement — move to Phase 3. Signal with: [PHASE:RETURN]
+
+PHASE 3 — THE RETURN
+Ask: what is the one concrete gesture — the smallest possible act — that honours what just moved? Not a plan, not a strategy. A gesture. Something physical, something that can be done today or tomorrow. Hold out for specificity. When the gesture is named, close with a single sentence and nothing more. Then output: [SAVE:gesture="[the gesture the person named]"]
+
+RULES:
+- One question or prompt at a time. Never list options.
+- Never explain the process to the person.
+- No therapeutic language. No "I hear that." No affirmations. No interpretations.
+- Do not use: journey, exploration, space, healing, process, work through.
+- If someone intellectualises, return them to the image with one concrete question.
+- Sparse, weight-bearing language only.
+- The closing gesture must be physical and specific, not metaphorical.
+- Never name the phases to the person. Phase markers are hidden signals to the interface only.
+- This works best when you have somewhere to put what comes up.
+
+Begin with a single question that invites the person to name what is live for them right now. No preamble.`;
+
+const phaseLabels = ['The Image', 'The Encounter', 'The Return'];
+let currentPhase = 0;
+let conversationHistory = [];
+let isWaiting = false;
+let sessionComplete = false;
+let currentGesture = '';
+let apiKey = '';
+
+const convEl = document.getElementById('conversation');
+const typingEl = document.getElementById('typing');
+const inputEl = document.getElementById('user-input');
+const sendBtn = document.getElementById('send-btn');
+const restartBtn = document.getElementById('restart-btn');
+const phaseLabel = document.getElementById('phase-label');
+const savePrompt = document.getElementById('save-prompt');
+const saveInput = document.getElementById('save-input');
+const bestiaryPanel = document.getElementById('bestiary-panel');
+const bestiaryList = document.getElementById('bestiary-list');
+const bestiaryEmpty = document.getElementById('bestiary-empty');
+const keyScreen = document.getElementById('key-screen');
+const keyInput = document.getElementById('api-key-input');
+const keySubmit = document.getElementById('key-submit');
+const keyError = document.getElementById('key-error');
+
+// --- BESTIARY STORAGE ---
+function loadBestiary() {
+  try {
+    return JSON.parse(localStorage.getItem('ai_bestiary') || '[]');
+  } catch { return []; }
+}
+
+function saveBestiaryEntry(images, gesture) {
+  const entries = loadBestiary();
+  entries.unshift({
+    date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
+    images,
+    gesture
+  });
+  localStorage.setItem('ai_bestiary', JSON.stringify(entries));
+  renderBestiary();
+}
+
+function renderBestiary() {
+  const entries = loadBestiary();
+  if (entries.length === 0) {
+    bestiaryEmpty.style.display = 'block';
+    const existing = bestiaryList.querySelectorAll('.bestiary-entry');
+    existing.forEach(e => e.remove());
+    return;
+  }
+  bestiaryEmpty.style.display = 'none';
+  bestiaryList.innerHTML = '';
+  entries.forEach(entry => {
+    const div = document.createElement('div');
+    div.className = 'bestiary-entry';
+    div.innerHTML = `
+      <div class="bestiary-date">${entry.date}</div>
+      <div class="bestiary-images">${entry.images}</div>
+      ${entry.gesture ? `<div class="bestiary-gesture">→ ${entry.gesture}</div>` : ''}
+    `;
+    bestiaryList.appendChild(div);
+  });
+}
+
+// --- UI ---
+function updatePhaseUI(phase) {
+  for (let i = 0; i < 3; i++) {
+    const dot = document.getElementById(`dot-${i}`);
+    dot.className = 'phase-dot';
+    if (i < phase) dot.classList.add('done');
+    else if (i === phase) dot.classList.add('active');
+  }
+  phaseLabel.textContent = phaseLabels[phase];
+}
+
+function addMessage(role, text, isReturn = false) {
+  const cleanText = text
+    .replace(/\[PHASE:ENCOUNTER\]/g, '')
+    .replace(/\[PHASE:RETURN\]/g, '')
+    .replace(/\[SAVE:[^\]]*\]/g, '')
+    .trim();
+  if (!cleanText) return;
+
+  const div = document.createElement('div');
+  div.className = `message ${role}${isReturn ? ' return' : ''}`;
+
+  const roleLabel = document.createElement('div');
+  roleLabel.className = 'message-role';
+  roleLabel.textContent = role === 'guide' ? '—' : 'you';
+
+  const textDiv = document.createElement('div');
+  textDiv.className = 'message-text';
+  textDiv.textContent = cleanText;
+
+  div.appendChild(roleLabel);
+  div.appendChild(textDiv);
+  convEl.appendChild(div);
+  convEl.scrollTop = convEl.scrollHeight;
+}
+
+function addPhaseDivider(label) {
+  const div = document.createElement('div');
+  div.className = 'phase-divider';
+  const span = document.createElement('span');
+  span.textContent = label;
+  div.appendChild(span);
+  convEl.appendChild(div);
+}
+
+function detectPhaseTransition(text) {
+  if (text.includes('[PHASE:ENCOUNTER]') && currentPhase === 0) {
+    currentPhase = 1; updatePhaseUI(1); addPhaseDivider('the encounter');
+  } else if (text.includes('[PHASE:RETURN]') && currentPhase === 1) {
+    currentPhase = 2; updatePhaseUI(2); addPhaseDivider('the return');
+  }
+}
+
+function extractGesture(text) {
+  const match = text.match(/\[SAVE:gesture="([^"]*)"\]/);
+  return match ? match[1] : '';
+}
+
+function showTyping() { typingEl.style.display = 'block'; convEl.scrollTop = convEl.scrollHeight; }
+function hideTyping() { typingEl.style.display = 'none'; }
+
+// --- CLAUDE ---
+async function callClaude(userMessage) {
+  if (userMessage) conversationHistory.push({ role: 'user', content: userMessage });
+
+  const response = await fetch('/api/proxy', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system: SYSTEM_PROMPT,
+      messages: conversationHistory
+    })
+  });
+
+  const data = await response.json();
+  if (data.error) throw new Error(data.error.message);
+  const assistantText = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
+  conversationHistory.push({ role: 'assistant', content: assistantText });
+  return assistantText;
+}
+
+async function sendMessage() {
+  if (isWaiting || sessionComplete) return;
+  const text = inputEl.value.trim();
+  if (!text) return;
+
+  inputEl.value = '';
+  inputEl.style.height = 'auto';
+  sendBtn.disabled = true;
+  isWaiting = true;
+
+  addMessage('user', text);
+  showTyping();
+
+  try {
+    const response = await callClaude(text);
+    hideTyping();
+    detectPhaseTransition(response);
+
+    const assistantCount = conversationHistory.filter(m => m.role === 'assistant').length;
+    const isReturn = currentPhase === 2 && assistantCount > 6;
+    addMessage('guide', response, isReturn);
+
+    const gesture = extractGesture(response);
+    if (gesture) {
+      currentGesture = gesture;
+      sessionComplete = true;
+      inputEl.style.display = 'none';
+      sendBtn.style.display = 'none';
+      document.getElementById('input-area').style.display = 'none';
+      savePrompt.style.display = 'block';
+      saveInput.focus();
+    }
+  } catch (err) {
+    hideTyping();
+    addMessage('guide', 'Something interrupted. Wait a moment and try again.');
+  }
+
+  isWaiting = false;
+  sendBtn.disabled = false;
+}
+
+function completeSession(images) {
+  saveBestiaryEntry(images || '(not recorded)', currentGesture);
+  savePrompt.style.display = 'none';
+  document.getElementById('input-area').style.display = 'block';
+  inputEl.style.display = 'block';
+  sendBtn.style.display = 'block';
+  inputEl.placeholder = 'session complete';
+  inputEl.disabled = true;
+  sendBtn.style.display = 'none';
+  restartBtn.style.display = 'block';
+}
+
+function restart() {
+  conversationHistory = [];
+  currentPhase = 0;
+  sessionComplete = false;
+  currentGesture = '';
+  convEl.innerHTML = '';
+  inputEl.value = '';
+  inputEl.disabled = false;
+  inputEl.style.display = 'block';
+  inputEl.placeholder = 'write here...';
+  sendBtn.style.display = 'block';
+  restartBtn.style.display = 'none';
+  savePrompt.style.display = 'none';
+  document.getElementById('input-area').style.display = 'block';
+  updatePhaseUI(0);
+  startSession();
+}
+
+async function startSession() {
+  isWaiting = true;
+  sendBtn.disabled = true;
+  showTyping();
+
+  try {
+    const opening = await callClaude(null);
+    hideTyping();
+    addMessage('guide', opening);
+  } catch (err) {
+    hideTyping();
+    addMessage('guide', 'What is alive in you right now — an object, a situation, something with some charge to it?');
+  }
+
+  isWaiting = false;
+  sendBtn.disabled = false;
+  inputEl.focus();
+}
+
+// --- EVENTS ---
+inputEl.addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 140) + 'px';
+});
+
+inputEl.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+saveInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { e.preventDefault(); completeSession(saveInput.value.trim()); }
+});
+
+sendBtn.addEventListener('click', sendMessage);
+restartBtn.addEventListener('click', restart);
+
+document.getElementById('save-confirm').addEventListener('click', () => {
+  completeSession(saveInput.value.trim());
+});
+
+document.getElementById('save-skip').addEventListener('click', () => {
+  completeSession('');
+});
+
+document.getElementById('bestiary-toggle').addEventListener('click', () => {
+  bestiaryPanel.classList.add('open');
+  renderBestiary();
+});
+
+document.getElementById('bestiary-close').addEventListener('click', () => {
+  bestiaryPanel.classList.remove('open');
+});
+
+// --- API KEY ---
+async function handleKeySubmit() {
+  const k = keyInput.value.trim();
+  if (!k.startsWith('sk-ant-')) {
+    keyError.style.display = 'block';
+    keyError.textContent = 'Key should start with sk-ant-';
+    return;
+  }
+  apiKey = k;
+  keyError.style.display = 'none';
+  keyScreen.style.display = 'none';
+  startSession();
+}
+
+keySubmit.addEventListener('click', handleKeySubmit);
+keyInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleKeySubmit(); });
+
+// Init
+renderBestiary();
+</script>
+</body>
+</html>

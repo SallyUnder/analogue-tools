@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Problem</title>
+<link href="https://fonts.googleapis.com/css2?family=Arsenal:ital,wght@0,400;0,700;1,400&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #1a1714;
+    --paper: #edeae3;
+    --paper-deep: #e0dcd4;
+    --ash: #8a8278;
+    --slate: #3d4a52;
+    --cold: #4a7a8a;
+  }
+
+  html, body { height: 100%; background: var(--slate); overflow: hidden; }
+
+  body {
+    font-family: 'Arsenal', serif;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 1000; opacity: 0.5;
+  }
+
+  #app {
+    width: min(680px, 96vw);
+    height: min(820px, 94vh);
+    background: var(--paper);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 40px 120px rgba(0,0,0,0.5), 0 0 0 1px rgba(26,23,20,0.15);
+  }
+
+  #app::before {
+    content: '';
+    position: absolute;
+    left: 58px; top: 0; bottom: 0;
+    width: 1px;
+    background: rgba(196,74,42,0.12);
+    z-index: 1; pointer-events: none;
+  }
+
+  #app::after {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: repeating-linear-gradient(
+      to bottom, transparent, transparent 31px,
+      rgba(139,130,120,0.07) 31px, rgba(139,130,120,0.07) 32px
+    );
+    pointer-events: none; z-index: 0;
+  }
+
+  #header {
+    padding: 28px 36px 20px 72px;
+    border-bottom: 1px solid rgba(26,23,20,0.08);
+    position: relative; z-index: 10; flex-shrink: 0;
+  }
+
+  #header h1 {
+    font-family: 'Arsenal', serif;
+    font-size: 11px; font-weight: 400;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--ash);
+  }
+
+  #header p {
+    font-family: 'IM Fell English', serif;
+    font-size: 12px; color: var(--ash);
+    margin-top: 4px; font-style: italic;
+  }
+
+  #conversation {
+    flex: 1; overflow-y: auto;
+    padding: 24px 36px 24px 72px;
+    position: relative; z-index: 10;
+    scroll-behavior: smooth;
+  }
+
+  #conversation::-webkit-scrollbar { width: 3px; }
+  #conversation::-webkit-scrollbar-thumb { background: var(--ash); }
+
+  .message {
+    margin-bottom: 22px;
+    animation: fadeIn 0.4s ease forwards;
+    opacity: 0;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .message.questioner { position: relative; }
+
+  .message.questioner::before {
+    content: attr(data-num);
+    position: absolute;
+    left: -52px; top: 22px;
+    font-size: 9px;
+    color: rgba(139,130,120,0.35);
+    letter-spacing: 0.1em;
+    font-family: 'Arsenal', serif;
+  }
+
+  .message.user {
+    padding-left: 20px;
+    border-left: 2px solid var(--cold);
+  }
+
+  .message-role {
+    font-size: 9px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--ash);
+    margin-bottom: 4px;
+  }
+
+  .message-text {
+    font-family: 'IM Fell English', serif;
+    font-size: 15px; line-height: 1.75; color: var(--ink);
+  }
+
+  .message.questioner .message-text { font-style: italic; color: var(--slate); }
+
+  .message.landing .message-text {
+    font-style: normal; color: var(--cold);
+    font-size: 14px;
+  }
+
+  #typing { margin-bottom: 22px; display: none; padding-left: 0; }
+  #typing.visible { display: block; }
+
+  .typing-dots { display: flex; gap: 5px; padding: 8px 0; }
+  .typing-dots span {
+    width: 4px; height: 4px; border-radius: 50%;
+    background: var(--ash);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes pulse {
+    0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+    40% { opacity: 1; transform: scale(1); }
+  }
+
+  #input-area {
+    padding: 18px 36px 26px 72px;
+    border-top: 1px solid rgba(26,23,20,0.07);
+    position: relative; z-index: 10; flex-shrink: 0;
+    background: var(--paper);
+  }
+
+  #input-wrapper { position: relative; }
+
+  #user-input {
+    width: 100%; background: transparent; border: none;
+    border-bottom: 1px solid rgba(26,23,20,0.15);
+    padding: 8px 48px 8px 0;
+    font-family: 'IM Fell English', serif;
+    font-size: 15px; color: var(--ink);
+    resize: none; outline: none;
+    min-height: 36px; max-height: 120px;
+    overflow-y: auto; line-height: 1.6;
+    transition: border-color 0.2s ease;
+  }
+
+  #user-input:focus { border-bottom-color: var(--cold); }
+  #user-input::placeholder { color: var(--ash); font-style: italic; font-size: 14px; }
+
+  #send-btn {
+    position: absolute; right: 0; bottom: 6px;
+    background: none; border: none; cursor: pointer;
+    padding: 4px; color: var(--ash);
+    transition: color 0.2s ease;
+    font-size: 18px; line-height: 1;
+  }
+
+  #send-btn:hover { color: var(--cold); }
+  #send-btn:disabled { opacity: 0.3; cursor: default; }
+
+  #restart-btn {
+    display: none; background: none;
+    border: 1px solid rgba(26,23,20,0.12);
+    color: var(--ash);
+    font-family: 'Arsenal', serif;
+    font-size: 10px; letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 6px 14px; cursor: pointer;
+    margin-top: 10px; transition: all 0.2s;
+  }
+
+  #restart-btn:hover { border-color: var(--cold); color: var(--cold); }
+
+  #key-screen {
+    position: absolute; inset: 0;
+    background: var(--paper);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 48px;
+  }
+  #key-screen h2 {
+    font-family: 'Arsenal', serif;
+    font-size: 11px; font-weight: 400;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--ash); margin-bottom: 28px;
+  }
+  #key-screen p {
+    font-family: 'IM Fell English', serif;
+    font-size: 14px; line-height: 1.75;
+    color: var(--ink); font-style: italic;
+    margin-bottom: 16px; max-width: 420px;
+  }
+  #key-screen .key-note {
+    font-size: 12px; color: var(--ash);
+    font-style: normal; margin-bottom: 28px;
+  }
+  #api-key-input {
+    width: 100%; background: transparent;
+    border: none; border-bottom: 1px solid rgba(26,23,20,0.2);
+    padding: 8px 0; font-family: 'Arsenal', serif;
+    font-size: 13px; color: var(--ink); outline: none;
+    letter-spacing: 0.05em; transition: border-color 0.2s;
+    margin-bottom: 20px;
+  }
+  #api-key-input:focus { border-bottom-color: var(--cold); }
+  #api-key-input::placeholder { color: var(--ash); font-style: italic; letter-spacing: 0; }
+  #key-submit {
+    background: none; border: 1px solid var(--cold); color: var(--cold);
+    font-family: 'Arsenal', serif; font-size: 10px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    padding: 8px 20px; cursor: pointer;
+    transition: all 0.2s; align-self: flex-start;
+  }
+  #key-submit:hover { background: var(--cold); color: var(--paper); }
+  #key-error {
+    font-family: 'IM Fell English', serif;
+    font-size: 13px; color: var(--cold);
+    margin-top: 12px; display: none; font-style: italic;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="key-screen">
+    <h2>The Problem</h2>
+    <p>This tool asks one question at a time to loosen what is stuck. It requires an Anthropic API key to run.</p>
+    <p class="key-note">Your key is used only to make requests directly to Anthropic. It is not stored anywhere except your browser's memory for this session.</p>
+    <input type="password" id="api-key-input" placeholder="sk-ant-...">
+    <button id="key-submit">begin</button>
+    <div id="key-error">That key didn't work. Check it and try again.</div>
+  </div>
+
+  <div id="header">
+    <h1>The Problem</h1>
+    <p>one question at a time</p>
+  </div>
+
+  <div id="conversation"></div>
+
+  <div id="typing">
+    <div class="typing-dots"><span></span><span></span><span></span></div>
+  </div>
+
+  <div id="input-area">
+    <div id="input-wrapper">
+      <textarea id="user-input" placeholder="what's stuck..." rows="1"></textarea>
+      <button id="send-btn">→</button>
+    </div>
+    <button id="restart-btn">start again</button>
+  </div>
+</div>
+
+<script>
+const SYSTEM_PROMPT = `You ask one question at a time to expand thinking and release the grip of a stuck situation. You are not here to organise thoughts or produce a plan. You are here to loosen. The register is close to Sedona Method — you work by releasing rather than solving.
+
+THE APPROACH:
+You follow the person's specific situation. Each question builds on exactly what they just said. You are not running a sequence — you are tracking what is live and making it strange enough to move.
+
+The questions open outward, not downward. They create space rather than focus. Some useful orientations:
+
+RELEASE — what would happen if this weren't held so tightly?
+"Could you let this be as it is, just for a moment?"
+"What's the simplest thing available right now?"
+"What would it feel like if this were already resolved?"
+
+EXPANSION — make the situation strange or larger than it is
+"What outlandish or unusual act would cause success here?"
+"Who would handle this in a way you'd find completely absurd? What would they do?"
+"If the opposite were true, what would that look like?"
+
+MINIMUM — find the smallest available movement
+"What is so small it barely counts as doing anything?"
+"What could happen in the next ten minutes that isn't the whole thing?"
+
+ACTUAL NEXT — land the person somewhere specific and physical without telling them what to do
+
+RULES:
+- One question only. Never two. Never advice. Never suggestions.
+- Build each question from the specific words the person just used.
+- No therapeutic language. No affirmations. No "it sounds like."
+- Dry, light, occasionally wry. Not warm. Not encouraging.
+- If they give a long answer, find the one word doing the most work and question that.
+- If they give a short answer, open it out rather than going deeper into it.
+- The comic register is available. Absurdity releases grip.
+- When the person names something specific and physical they could do, respond with one short sentence — not praise, just acknowledgment that this is the thing. Then stop.
+- Never use: journey, process, unpack, explore, sit with, lean into, work through, growth.
+- Do not explain what you are doing.
+
+Begin with one sentence only: ask the person to name what is stuck.`;
+
+let conversationHistory = [];
+let isWaiting = false;
+let questionCount = 0;
+let isDone = false;
+let apiKey = '';
+
+const convEl = document.getElementById('conversation');
+const typingEl = document.getElementById('typing');
+const inputEl = document.getElementById('user-input');
+const sendBtn = document.getElementById('send-btn');
+const restartBtn = document.getElementById('restart-btn');
+const keyScreen = document.getElementById('key-screen');
+const keyInput = document.getElementById('api-key-input');
+const keySubmit = document.getElementById('key-submit');
+const keyError = document.getElementById('key-error');
+
+function addMessage(role, text, isLanding = false) {
+  const div = document.createElement('div');
+  div.className = `message ${role}${isLanding ? ' landing' : ''}`;
+
+  if (role === 'questioner') {
+    questionCount++;
+    div.setAttribute('data-num', questionCount);
+  }
+
+  const roleLabel = document.createElement('div');
+  roleLabel.className = 'message-role';
+  roleLabel.textContent = role === 'questioner' ? '—' : 'you';
+
+  const textDiv = document.createElement('div');
+  textDiv.className = 'message-text';
+  textDiv.textContent = text;
+
+  div.appendChild(roleLabel);
+  div.appendChild(textDiv);
+  convEl.appendChild(div);
+  convEl.scrollTop = convEl.scrollHeight;
+}
+
+function showTyping() { typingEl.classList.add('visible'); convEl.scrollTop = convEl.scrollHeight; }
+function hideTyping() { typingEl.classList.remove('visible'); }
+
+async function callClaude(userMessage) {
+  if (userMessage) conversationHistory.push({ role: 'user', content: userMessage });
+
+  const response = await fetch('/api/proxy', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system: SYSTEM_PROMPT,
+      messages: conversationHistory
+    })
+  });
+
+  const data = await response.json();
+  if (data.error) throw new Error(data.error.message);
+  const text = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
+  conversationHistory.push({ role: 'assistant', content: text });
+  return text;
+}
+
+async function sendMessage() {
+  if (isWaiting || isDone) return;
+  const text = inputEl.value.trim();
+  if (!text) return;
+
+  inputEl.value = '';
+  inputEl.style.height = 'auto';
+  sendBtn.disabled = true;
+  isWaiting = true;
+
+  addMessage('user', text);
+  showTyping();
+
+  try {
+    const response = await callClaude(text);
+    hideTyping();
+
+    const assistantCount = conversationHistory.filter(m => m.role === 'assistant').length;
+    const isLanding = !response.includes('?') && response.trim().length < 120 && assistantCount > 3;
+    addMessage('questioner', response, isLanding);
+
+    if (isLanding) {
+      isDone = true;
+      inputEl.placeholder = 'done';
+      inputEl.disabled = true;
+      sendBtn.style.display = 'none';
+      restartBtn.style.display = 'block';
+    }
+  } catch (err) {
+    hideTyping();
+    addMessage('questioner', 'Something interrupted. Try again.');
+  }
+
+  isWaiting = false;
+  sendBtn.disabled = false;
+  if (!isDone) inputEl.focus();
+}
+
+function restart() {
+  conversationHistory = [];
+  questionCount = 0;
+  isDone = false;
+  convEl.innerHTML = '';
+  inputEl.value = '';
+  inputEl.disabled = false;
+  inputEl.placeholder = 'what\'s stuck...';
+  sendBtn.style.display = '';
+  restartBtn.style.display = 'none';
+  startSession();
+}
+
+async function startSession() {
+  isWaiting = true;
+  sendBtn.disabled = true;
+  showTyping();
+
+  try {
+    const opening = await callClaude(null);
+    hideTyping();
+    addMessage('questioner', opening);
+  } catch (err) {
+    hideTyping();
+    addMessage('questioner', 'What is stuck?');
+  }
+
+  isWaiting = false;
+  sendBtn.disabled = false;
+  inputEl.focus();
+}
+
+inputEl.addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+
+inputEl.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+sendBtn.addEventListener('click', sendMessage);
+restartBtn.addEventListener('click', restart);
+
+async function handleKeySubmit() {
+  const k = keyInput.value.trim();
+  if (!k.startsWith('sk-ant-')) {
+    keyError.style.display = 'block';
+    keyError.textContent = 'Key should start with sk-ant-';
+    return;
+  }
+  apiKey = k;
+  keyError.style.display = 'none';
+  keyScreen.style.display = 'none';
+  startSession();
+}
+
+keySubmit.addEventListener('click', handleKeySubmit);
+keyInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleKeySubmit(); });
+</script>
+</body>
+</html>
